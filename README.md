@@ -36,7 +36,7 @@ chat_log_cleaner/
 ### 1. 環境準備
 
 ```bash
-# 克隆專案
+# 複製專案
 git clone <repository-url>
 cd chat_log_cleaner
 
@@ -187,7 +187,9 @@ python src/TreeMaker.py --stats
 
 - 建立 Issue
 - 發送 Pull Request
-- 電子郵件：[your-email@example.com]
+- 電子郵件：bruce89933036@hotmail.com
+
+**開發者**：Bruce Yang
 
 ---
 
