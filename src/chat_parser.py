@@ -2,6 +2,7 @@ import re
 from datetime import datetime
 from user_identifier import identify_users_from_file, normalize_user_name
 from smart_user_identifier import smart_identify_users
+from user_directory_manager import user_directory_manager
 
 def extract_user_and_content(parts, real_users=None, user_mapping=None):
     """
@@ -22,9 +23,19 @@ def extract_user_and_content(parts, real_users=None, user_mapping=None):
     if len(parts) == 1:
         return parts[0], ""
     
+    # 方法0：第一輪比對 - 使用使用者名冊（完全比對）
+    for i in range(1, min(len(parts) + 1, 6)):
+        potential_user = ' '.join(parts[:i])
+        
+        # 檢查是否為已知使用者（完全比對）
+        result = user_directory_manager.find_user_by_name(potential_user)
+        if result:
+            content = ' '.join(parts[i:]) if i < len(parts) else ""
+            return result, content
+    
     # 如果有智能識別結果，優先使用
     if real_users:
-        # 方法0：檢查是否匹配智能識別的使用者名稱
+        # 方法1：檢查是否匹配智能識別的使用者名稱
         for i in range(1, min(len(parts) + 1, 6)):
             potential_user = ' '.join(parts[:i])
             if potential_user in real_users:

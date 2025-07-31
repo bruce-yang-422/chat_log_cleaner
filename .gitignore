@@ -22,6 +22,9 @@ data/output/*
 data/raw/*
 !data/raw/.gitkeep
 
+# User directory (包含個資，不上傳)
+data/user_directory.json
+
 # Logs
 *.log
 *.tmp

@@ -5,6 +5,7 @@ import re
 from collections import Counter, defaultdict
 from typing import List, Dict, Tuple, Set
 import os
+from user_directory_manager import user_directory_manager
 
 def extract_message_samples(file_path: str, sample_count: int = 50) -> List[Tuple[str, str, str]]:
     """
@@ -26,17 +27,9 @@ def extract_message_samples(file_path: str, sample_count: int = 50) -> List[Tupl
         re.compile(r"^(\d{4})/(\d{1,2})/(\d{1,2})（週."),
     ]
     
-    # 支援多種訊息格式（社群環境更複雜）
-    message_patterns = [
-        # 製表符分隔格式
-        re.compile(r"^(\d{2}:\d{2})\t(.+?)\t(.+)"),
-        # 標準空格分隔格式
-        re.compile(r"^(\d{2}:\d{2})\s+(.+?)\s+(.+)"),
-        # 社群格式：時間 + 使用者 + 內容（可能包含特殊字符）
-        re.compile(r"^(\d{2}:\d{2})\s+([^～？！，。\s]+(?:\s+[^～？！，。\s]+)*)\s+(.+)"),
-        # 寬鬆格式：時間 + 任意使用者名稱 + 內容
-        re.compile(r"^(\d{2}:\d{2})\s+([^\s]+(?:\s+[^\s]+)*?)\s+(.+)"),
-    ]
+    # 使用與 chat_parser.py 相同的正則表達式模式
+    tab_message_pattern = re.compile(r"^(\d{2}:\d{2})\t(.+?)\t(.+)")
+    time_pattern = re.compile(r"^(\d{2}:\d{2})\s+(.+)")
     
     with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
@@ -62,18 +55,132 @@ def extract_message_samples(file_path: str, sample_count: int = 50) -> List[Tupl
             if current_date is None:
                 continue
             
-            # 嘗試匹配訊息格式
-            message_match = None
-            for pattern in message_patterns:
-                message_match = pattern.match(line)
-                if message_match:
-                    break
+            # 處理訊息行 - 使用與 chat_parser.py 相同的邏輯
+            user = None
+            content = None
+            time = None
             
-            if message_match:
-                time, user, content = message_match.groups()
+            # 先嘗試 tab 分隔格式
+            msg_match = tab_message_pattern.match(line)
+            if msg_match:
+                time, user, content = msg_match.groups()
+            else:
+                # 使用空格分隔格式，需要智能解析
+                time_match = time_pattern.match(line)
+                if time_match:
+                    time, remaining = time_match.groups()
+                    # 智能解析：嘗試識別完整的使用者名稱
+                    parts = remaining.split()
+                    
+                    if len(parts) >= 1:
+                        # 使用與 chat_parser.py 相同的 extract_user_and_content 邏輯
+                        user, content = extract_user_and_content_simple(parts)
+                    else:
+                        user = ""
+                        content = ""
+            
+            if user and content and time:
                 samples.append((time, user, content))
     
     return samples
+
+def extract_user_and_content_simple(parts):
+    """
+    簡化版的使用者名稱和內容解析（用於樣本提取）
+    
+    Args:
+        parts: 分割後的文字部分列表
+        
+    Returns:
+        (user, content): 使用者名稱和內容的元組
+    """
+    if not parts:
+        return "", ""
+    
+    # 如果只有一個部分，直接返回
+    if len(parts) == 1:
+        return parts[0], ""
+    
+    # 方法0：第一輪比對 - 使用使用者名冊（完全比對）
+    for i in range(1, min(len(parts) + 1, 6)):
+        potential_user = ' '.join(parts[:i])
+        
+        # 檢查是否為已知使用者（完全比對）
+        result = user_directory_manager.find_user_by_name(potential_user)
+        if result:
+            content = ' '.join(parts[i:]) if i < len(parts) else ""
+            return result, content
+    
+    # 方法1：檢查是否有明顯的內容標記
+    content_indicators = ['貼圖', '圖片', '影片', '語音訊息', '檔案', '位置']
+    
+    for i in range(1, min(len(parts) + 1, 6)):
+        potential_user = ' '.join(parts[:i])
+        remaining_parts = parts[i:]
+        
+        if remaining_parts:
+            first_remaining = remaining_parts[0]
+            
+            # 檢查是否為內容標記
+            if first_remaining in content_indicators:
+                content = ' '.join(remaining_parts)
+                return potential_user, content
+            
+            # 檢查是否為表情符號或特殊符號
+            if any(char in first_remaining for char in ['😀', '😂', '😅', '🙏', '～', '～', '～']):
+                content = ' '.join(remaining_parts)
+                return potential_user, content
+            
+            # 檢查是否為URL
+            if first_remaining.startswith('http'):
+                content = ' '.join(remaining_parts)
+                return potential_user, content
+            
+            # 檢查是否為常見的對話內容開頭
+            if first_remaining in ['嗨嗨', '想跟你討教', '順便問一下', '我還是先', '我把樓上', '合約都', '然後', 'User～']:
+                content = ' '.join(remaining_parts)
+                return potential_user, content
+    
+    # 方法2：檢查是否為多部分使用者名稱（包含下劃線和空格）
+    for i in range(2, min(len(parts) + 1, 6)):  # 從2個部分開始檢查
+        potential_user = ' '.join(parts[:i])
+        
+        # 檢查是否包含下劃線且長度較長（可能是完整的使用者名稱）
+        if '_' in potential_user and len(potential_user) > 10:
+            content = ' '.join(parts[i:]) if i < len(parts) else ""
+            return potential_user, content
+    
+    # 方法3：基於使用者名稱的常見模式 (下劃線)
+    for i in range(1, min(len(parts) + 1, 6)):
+        potential_user = ' '.join(parts[:i])
+        if '_' in potential_user:
+            content = ' '.join(parts[i:]) if i < len(parts) else ""
+            return potential_user, content
+    
+    # 方法4：檢查中文+英文模式
+    for i in range(1, min(len(parts) + 1, 6)):
+        potential_user = ' '.join(parts[:i])
+        has_chinese = any('\u4e00' <= char <= '\u9fff' for char in potential_user)
+        has_english = any(char.isalpha() and ord(char) < 128 for char in potential_user)
+        if has_chinese and has_english:
+            content = ' '.join(parts[i:]) if i < len(parts) else ""
+            return potential_user, content
+    
+    # 方法5：檢查是否為常見的內容開頭詞
+    content_start_words = ['youtote', 'Momo', 'My', 'From', 'One', '【', 'Lalamove', '下載位置']
+    for i in range(1, min(len(parts) + 1, 6)):
+        potential_user = ' '.join(parts[:i])
+        remaining_parts = parts[i:]
+        if remaining_parts:
+            first_remaining = remaining_parts[0]
+            if first_remaining in content_start_words:
+                content = ' '.join(remaining_parts)
+                return potential_user, content
+    
+    # 最終回退：使用第一個部分作為使用者名稱
+    user = parts[0]
+    content = ' '.join(parts[1:]) if len(parts) > 1 else ""
+    return user, content
 
 def analyze_user_patterns(samples: List[Tuple[str, str, str]]) -> Dict[str, Dict]:
     """
@@ -171,10 +278,32 @@ def identify_real_users(analysis: Dict[str, Dict], min_frequency: float = 0.02) 
         # 如果通過所有檢查，認為是真正使用者
         real_users.append(user)
     
-    # 按出現頻率排序
-    real_users.sort(key=lambda u: analysis[u]['count'], reverse=True)
+    # 過濾變體：移除明顯是變體的使用者名稱
+    filtered_users = []
+    for user in real_users:
+        is_variant = False
+        
+        # 檢查是否為其他使用者的變體
+        for other_user in real_users:
+            if user != other_user:
+                # 檢查是否為包含關係（變體通常包含標準名稱）
+                if other_user in user and len(user) > len(other_user) + 5:
+                    # 如果一個名稱包含另一個名稱，且長度差異較大，可能是變體
+                    is_variant = True
+                    break
+                
+                # 檢查是否有共同前綴且長度差異較大
+                if user.startswith(other_user) and len(user) > len(other_user) + 3:
+                    is_variant = True
+                    break
+        
+        if not is_variant:
+            filtered_users.append(user)
     
-    return real_users
+    # 按出現頻率排序
+    filtered_users.sort(key=lambda u: analysis[u]['count'], reverse=True)
+    
+    return filtered_users
 
 def create_user_mapping(real_users: List[str], analysis: Dict[str, Dict]) -> Dict[str, str]:
     """
@@ -189,17 +318,48 @@ def create_user_mapping(real_users: List[str], analysis: Dict[str, Dict]) -> Dic
     """
     mapping = {}
     
+    # 按頻率排序，頻率高的作為標準名稱
+    sorted_users = sorted(real_users, key=lambda x: analysis[x]['count'], reverse=True)
+    
     # 對於每個識別出的真正使用者，創建標準化映射
-    for real_user in real_users:
-        # 檢查是否有相似的使用者名稱（可能是變體）
-        for user in analysis.keys():
-            if user != real_user:
-                # 簡單的相似度檢查（可以根據需要改進）
-                if real_user in user or user in real_user:
-                    mapping[user] = real_user
-                elif real_user.split('_')[0] == user.split('_')[0]:
-                    # 如果下劃線前的部分相同，認為是變體
-                    mapping[user] = real_user
+    for user in analysis.keys():
+        if user not in real_users:
+            # 找到最匹配的標準使用者名稱
+            best_match = None
+            best_score = 0
+            
+            for real_user in sorted_users:
+                score = 0
+                
+                # 檢查是否為包含關係
+                if real_user in user:
+                    score += 10
+                elif user in real_user:
+                    score += 5
+                
+                # 檢查下劃線前的部分是否相同
+                if '_' in real_user and '_' in user:
+                    if real_user.split('_')[0] == user.split('_')[0]:
+                        score += 8
+                
+                # 檢查是否有共同的前綴
+                common_prefix = ""
+                for i, (c1, c2) in enumerate(zip(real_user, user)):
+                    if c1 == c2:
+                        common_prefix += c1
+                    else:
+                        break
+                
+                if len(common_prefix) > 3:  # 至少3個字符的共同前綴
+                    score += len(common_prefix)
+                
+                if score > best_score:
+                    best_score = score
+                    best_match = real_user
+            
+            # 如果找到合適的匹配，創建映射
+            if best_match and best_score >= 5:  # 最低匹配分數
+                mapping[user] = best_match
     
     # 特殊處理：為 "Unknown" 使用者提供更有意義的標識
     if 'Unknown' in real_users:
@@ -331,7 +491,7 @@ def smart_identify_users(file_path: str, sample_count: int = 50) -> Tuple[List[s
 
 if __name__ == "__main__":
     # 測試功能
-    test_file = "data/raw/[LINE]測試檔案.txt"
+    test_file = "data/raw/[LINE]聖伯納_Peggy 林佩萱.txt"
     if os.path.exists(test_file):
         real_users, mapping = smart_identify_users(test_file)
         print(f"\n測試結果：")

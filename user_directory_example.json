@@ -1,0 +1,40 @@
+{
+  "users": [
+    "User1_Group User1_FullName",
+    "User2_Group User2_FullName",
+    "User3_Group User3_FullName",
+    "User4_Group User4_FullName",
+    "User5_Group User5_FullName",
+    "User6_Group User6_FullName",
+    "User7_Group User7_FullName",
+    "User8_Group User8_FullName",
+    "User9_Group User9_FullName",
+    "User10_Group User10_FullName",
+    "User11_Group User11_FullName",
+    "Unknown",
+    "User12_Group User12_FullName"
+  ],
+  "metadata": {
+    "version": "2.0",
+    "created_date": "2025-01-27",
+    "description": "簡化版使用者名冊範例，僅包含完整使用者名稱",
+    "max_length": 50,
+    "match_type": "exact",
+    "instructions": [
+      "1. 將此檔案複製到 data/ 目錄下",
+      "2. 重新命名為 user_directory.json",
+      "3. 根據您的聊天記錄修改使用者名稱列表",
+      "4. 每個使用者名稱最多50字元",
+      "5. 系統會進行完全比對，避免內容被誤認為使用者名稱",
+      "6. 請將範例名稱替換為實際的使用者名稱"
+    ],
+    "examples": {
+      "chinese_only": ["王小明", "李小華", "張小美"],
+      "english_only": ["John", "Mary", "David"],
+      "chinese_english": ["王小明 John", "李小華 Mary"],
+      "underscore": ["Group_User", "Company_Employee"],
+      "parentheses": ["User(sky)", "Name(nickname)"],
+      "multi_word": ["Group_User FullName", "Company_Employee Title"]
+    }
+  }
+} 
