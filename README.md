@@ -69,7 +69,33 @@ pip install -r requirements.txt
     "退出群組",
     "封鎖",
     "解除封鎖"
-  ]
+  ],
+  "watchlist_keywords": [
+    "維修",
+    "道歉",
+    "客人",
+    "有錢",
+    "社會中堅",
+    "小屁孩"
+  ],
+  "analysis_settings": {
+    "sample_count_智能識別樣本數量": 50,
+    "traditional_sample_count_傳統識別樣本數量": 20,
+    "min_frequency_private_私聊最小頻率": 0.05,
+    "min_frequency_group_社群最小頻率": 0.02,
+    "min_content_diversity_最小內容多樣性": 0.05,
+    "max_user_name_length_用戶名最大長度": 50,
+    "min_user_name_length_用戶名最小長度": 2
+  },
+  "parsing_settings": {
+    "emoji_chars": ["😀", "😂", "😅", "🙏", "～"],
+    "content_indicators": ["貼圖", "圖片", "影片", "語音訊息", "檔案", "位置"],
+    "conversation_starters": ["嗨嗨", "想跟你討教", "順便問一下", "我還是先", "我把樓上", "合約都", "然後", "User～"],
+    "content_start_words": ["youtote", "Momo", "My", "From", "One", "【", "Lalamove", "下載位置"],
+    "system_keywords": ["加入聊天", "退出群組", "退出社群", "封鎖", "解除封鎖"],
+    "excluded_users": ["咻咻咻", "點", "瑪菈緹雅", "嵐", "Bruce"],
+    "bot_keywords": ["bot", "廣告", "spam", "auto"]
+  }
 }
 ```
 
@@ -133,6 +159,31 @@ python src/main.py
 - **標準空格分隔**：`12:04 使用者名稱 訊息內容`
 - **社群格式**：`12:04 複雜使用者名稱 訊息內容`
 - **寬鬆格式**：適應各種複雜格式
+
+## ⚙️ 配置參數說明
+
+### analysis_settings（分析設定）
+- `sample_count_智能識別樣本數量`：智能識別使用的樣本數量
+- `traditional_sample_count_傳統識別樣本數量`：傳統識別使用的樣本數量
+- `min_frequency_private_私聊最小頻率`：私聊環境的最小出現頻率閾值
+- `min_frequency_group_社群最小頻率`：社群環境的最小出現頻率閾值
+- `min_content_diversity_最小內容多樣性`：最小內容多樣性要求
+- `max_user_name_length_用戶名最大長度`：使用者名稱最大長度限制
+- `min_user_name_length_用戶名最小長度`：使用者名稱最小長度限制
+
+### parsing_settings（解析設定）
+- `emoji_chars`：表情符號字符列表，用於識別非使用者名稱
+- `content_indicators`：內容標記列表，用於識別特殊內容類型
+- `conversation_starters`：對話開頭詞列表，用於識別內容開始
+- `content_start_words`：內容開頭詞列表，用於識別特定內容類型
+- `system_keywords`：系統關鍵字列表，用於識別系統訊息
+- `excluded_users`：排除的使用者名稱列表
+- `bot_keywords`：機器人關鍵字列表，用於識別機器人帳號
+
+### 其他設定
+- `watchlist_users`：關注使用者列表，這些使用者的訊息會被標記為關注對象
+- `exclude_keywords`：排除關鍵字列表，包含這些關鍵字的訊息會被過濾掉
+- `watchlist_keywords`：關注關鍵字列表，包含這些關鍵字的訊息會被標記為關注對象
 
 ## 🧠 智能識別功能
 
@@ -200,10 +251,29 @@ python src/main.py
 ## ⚙️ 自定義配置
 
 ### 調整識別參數
-在 `src/smart_user_identifier.py` 中修改：
-- `sample_count`：分析樣本數量（預設50）
-- `min_frequency`：最小出現頻率
-- `content_diversity`：內容多樣性要求
+在 `config.json` 的 `analysis_settings` 區塊中修改：
+
+#### 樣本數量設定
+- **`sample_count_智能識別樣本數量`**：智能識別分析的樣本數量
+  - 建議範圍：30-100，數量太少可能識別不準確，太多會影響處理速度
+- **`traditional_sample_count_傳統識別樣本數量`**：傳統識別分析的樣本數量
+  - 備用識別方法，通常不需要調整
+
+#### 頻率閾值設定
+- **`min_frequency_private_私聊最小頻率`**：私聊環境最小出現頻率
+  - 私聊中使用者出現頻率較高，建議保持5%以上
+- **`min_frequency_group_社群最小頻率`**：社群環境最小出現頻率
+  - 社群中使用者較多，頻率較低，建議2%以上
+
+#### 內容品質設定
+- **`min_content_diversity_最小內容多樣性`**：最小內容多樣性要求
+  - 防止機器人或重複內容，建議5%以上
+- **`max_user_name_length_用戶名最大長度`**：使用者名稱最大長度
+  - 過長的名稱可能是系統訊息
+- **`min_user_name_length_用戶名最小長度`**：使用者名稱最小長度
+  - 過短的名稱可能是符號或表情
+
+> **重要提醒**：所有參數現在都必須在 `config.json` 中設定，腳本不再使用硬編碼的預設值。請確保 `config.json` 包含所有必要的參數。
 
 ### 新增關鍵字過濾
 在 `config.json` 的 `exclude_keywords` 陣列中添加關鍵字。

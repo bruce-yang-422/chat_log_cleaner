@@ -3,11 +3,11 @@
 
 import re
 from collections import Counter, defaultdict
-from typing import List, Dict, Tuple, Set
+from typing import List, Dict, Tuple
 import os
 from user_directory_manager import user_directory_manager
 
-def extract_message_samples(file_path: str, sample_count: int = 50) -> List[Tuple[str, str, str]]:
+def extract_message_samples(file_path: str, sample_count: int) -> List[Tuple[str, str, str]]:
     """
     從聊天記錄中提取前N組對話的樣本
     
@@ -84,7 +84,7 @@ def extract_message_samples(file_path: str, sample_count: int = 50) -> List[Tupl
     
     return samples
 
-def extract_user_and_content_simple(parts):
+def extract_user_and_content_simple(parts: List[str]) -> Tuple[str, str]:
     """
     簡化版的使用者名稱和內容解析（用於樣本提取）
     
@@ -101,7 +101,63 @@ def extract_user_and_content_simple(parts):
     if len(parts) == 1:
         return parts[0], ""
     
-    # 方法0：第一輪比對 - 使用使用者名冊（完全比對）
+    # 方法0：優先處理簡短明確的使用者名稱（如 "WhoAmI"）
+    # 檢查第一個部分是否為明確的使用者名稱
+    first_part = parts[0]
+    
+    # 簡短明確的使用者名稱特徵：
+    # 1. 長度適中（可配置範圍）
+    # 2. 不包含空格
+    # 3. 不是表情符號或特殊符號
+    # 4. 不是URL
+    # 5. 不是明顯的內容詞
+    min_username_length = 2
+    max_username_length = 15
+    
+    # 從配置中獲取使用者名稱長度限制
+    try:
+        import json
+        with open('config.json', 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        min_username_length = config['analysis_settings']['min_user_name_length_用戶名最小長度']
+        max_username_length = config['analysis_settings']['max_user_name_length_用戶名最大長度']
+    except:
+        pass  # 如果無法讀取配置，使用默認值
+    
+    # 從配置中獲取解析設置
+    emoji_chars = ['😀', '😂', '😅', '🙏', '～']  # 默認值
+    content_indicators = ['貼圖', '圖片', '影片', '語音訊息', '檔案', '位置']  # 默認值
+    conversation_starters = ['嗨嗨', '想跟你討教', '順便問一下', '我還是先', '我把樓上', '合約都', '然後', 'User～']  # 默認值
+    
+    try:
+        import json
+        with open('config.json', 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        parsing_settings = config.get('parsing_settings', {})
+        emoji_chars = parsing_settings.get('emoji_chars', emoji_chars)
+        content_indicators = parsing_settings.get('content_indicators', content_indicators)
+        conversation_starters = parsing_settings.get('conversation_starters', conversation_starters)
+    except:
+        pass  # 如果無法讀取配置，使用默認值
+    
+    if (min_username_length <= len(first_part) <= max_username_length and 
+        ' ' not in first_part and 
+        not any(char in first_part for char in emoji_chars) and
+        not first_part.startswith('http') and
+        first_part not in content_indicators and
+        first_part not in conversation_starters):
+        
+        # 檢查是否為已知使用者
+        result = user_directory_manager.find_user_by_name(first_part)
+        if result:
+            content = ' '.join(parts[1:]) if len(parts) > 1 else ""
+            return result, content
+        
+        # 如果第一個部分看起來像使用者名稱，直接使用
+        content = ' '.join(parts[1:]) if len(parts) > 1 else ""
+        return first_part, content
+    
+    # 方法1：使用使用者名冊（完全比對）
     for i in range(1, min(len(parts) + 1, 6)):
         potential_user = ' '.join(parts[:i])
         
@@ -201,7 +257,18 @@ def analyze_user_patterns(samples: List[Tuple[str, str, str]]) -> Dict[str, Dict
     
     for time, user, content in samples:
         user_counter[user] += 1
-        user_content_patterns[user].append(content[:50])  # 只取前50個字符
+        # 從配置中獲取內容截取長度，如果沒有配置則使用默認值
+        content_length_limit = 50  # 默認值
+        try:
+            import json
+            with open('config.json', 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            # 使用用戶名最大長度作為內容截取長度的參考
+            content_length_limit = config['analysis_settings']['max_user_name_length_用戶名最大長度']
+        except:
+            pass  # 如果無法讀取配置，使用默認值
+        
+        user_content_patterns[user].append(content[:content_length_limit])  # 只取前N個字符
     
     # 分析結果
     analysis = {}
@@ -232,13 +299,14 @@ def analyze_user_patterns(samples: List[Tuple[str, str, str]]) -> Dict[str, Dict
     
     return analysis
 
-def identify_real_users(analysis: Dict[str, Dict], min_frequency: float = 0.02) -> List[str]:
+def identify_real_users(analysis: Dict[str, Dict], min_frequency: float, config: Dict) -> List[str]:
     """
     根據分析結果識別真正的使用者名稱（社群環境優化）
     
     Args:
         analysis: 使用者分析結果
         min_frequency: 最小出現頻率閾值
+        config: 配置字典，包含分析設定
         
     Returns:
         識別出的真正使用者名稱列表
@@ -258,8 +326,13 @@ def identify_real_users(analysis: Dict[str, Dict], min_frequency: float = 0.02) 
         if any(keyword in user.lower() for keyword in ['bot', '廣告', 'spam', 'auto']):
             continue
         
+        # 從配置中獲取參數
+        min_length = config['analysis_settings']['min_user_name_length_用戶名最小長度']
+        max_length = config['analysis_settings']['max_user_name_length_用戶名最大長度']
+        min_diversity = config['analysis_settings']['min_content_diversity_最小內容多樣性']
+        
         # 排除過短或過長的名稱
-        if stats['length'] < 2 or stats['length'] > 50:
+        if stats['length'] < min_length or stats['length'] > max_length:
             continue
         
         # 檢查出現頻率（社群環境中降低閾值）
@@ -267,7 +340,7 @@ def identify_real_users(analysis: Dict[str, Dict], min_frequency: float = 0.02) 
             continue
         
         # 檢查內容多樣性（社群環境中降低要求）
-        if stats['content_diversity'] < 0.05:  # 降低到5%
+        if stats['content_diversity'] < min_diversity:
             continue
         
         # 社群環境特殊檢查：檢查是否為有意義的使用者名稱
@@ -433,13 +506,14 @@ def detect_chat_format(samples: List[Tuple[str, str, str]]) -> str:
     else:
         return 'private'
 
-def smart_identify_users(file_path: str, sample_count: int = 50) -> Tuple[List[str], Dict[str, str]]:
+def smart_identify_users(file_path: str, sample_count: int, config: Dict) -> Tuple[List[str], Dict[str, str]]:
     """
     智能識別聊天記錄中的使用者名稱
     
     Args:
         file_path: 聊天記錄檔案路徑
         sample_count: 分析樣本數量
+        config: 配置字典，包含分析設定
         
     Returns:
         (真正使用者列表, 使用者名稱映射字典)
@@ -465,16 +539,20 @@ def smart_identify_users(file_path: str, sample_count: int = 50) -> Tuple[List[s
     
     print(f"發現 {len(analysis)} 個不同的使用者名稱")
     
+    # 從配置中獲取頻率參數
+    min_frequency_private = config['analysis_settings']['min_frequency_private_私聊最小頻率']
+    min_frequency_group = config['analysis_settings']['min_frequency_group_社群最小頻率']
+    
     # 根據格式調整識別參數
     if chat_format == 'group':
-        min_frequency = 0.02  # 社群環境降低頻率要求
+        min_frequency = min_frequency_group  # 社群環境降低頻率要求
         print("使用社群模式識別（降低頻率要求）")
     else:
-        min_frequency = 0.05  # 私聊環境保持較高要求
+        min_frequency = min_frequency_private  # 私聊環境保持較高要求
         print("使用私聊模式識別")
     
     # 識別真正使用者
-    real_users = identify_real_users(analysis, min_frequency)
+    real_users = identify_real_users(analysis, min_frequency, config)
     
     print(f"識別出 {len(real_users)} 個真正使用者：")
     for i, user in enumerate(real_users, 1):

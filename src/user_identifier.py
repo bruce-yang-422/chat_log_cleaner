@@ -2,7 +2,7 @@ import re
 from collections import Counter, defaultdict
 from typing import List, Dict, Tuple
 
-def extract_user_samples(file_path: str, sample_count: int = 20) -> List[str]:
+def extract_user_samples(file_path: str, sample_count: int) -> List[str]:
     """
     從聊天記錄中提取前N組對話的使用者名稱樣本
     
@@ -120,7 +120,7 @@ def normalize_user_name(user_name: str, user_patterns: Dict[str, str]) -> str:
     # 如果沒有匹配的模式，返回原始名稱
     return user_name
 
-def identify_users_from_file(file_path: str, sample_count: int = 20) -> Dict[str, str]:
+def identify_users_from_file(file_path: str, sample_count: int) -> Dict[str, str]:
     """
     從檔案中識別使用者模式
     
@@ -135,7 +135,7 @@ def identify_users_from_file(file_path: str, sample_count: int = 20) -> Dict[str
     user_patterns = analyze_user_patterns(user_samples)
     return user_patterns
 
-def print_user_analysis(file_path: str, sample_count: int = 20):
+def print_user_analysis(file_path: str, sample_count: int):
     """
     印出使用者分析結果（用於調試）
     

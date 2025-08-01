@@ -50,17 +50,27 @@ class UserDirectoryManager:
             print(f"載入使用者名冊失敗：{e}")
             return False
     
-    def find_user_by_name(self, name: str, max_length: int = 50) -> Optional[str]:
+    def find_user_by_name(self, name: str, max_length: int = None) -> Optional[str]:
         """
         根據使用者名稱進行完全比對查找
         
         Args:
             name: 要查找的使用者名稱
-            max_length: 最大比對長度
+            max_length: 最大比對長度（如果為 None，將使用配置中的值）
             
         Returns:
             匹配的完整使用者名稱或 None
         """
+        # 如果沒有提供 max_length，使用配置中的值
+        if max_length is None:
+            try:
+                import json
+                with open('config.json', 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                max_length = config['analysis_settings']['max_user_name_length_用戶名最大長度']
+            except:
+                max_length = 30  # 如果無法讀取配置，使用默認值
+        
         # 限制比對長度
         name_to_check = name[:max_length]
         

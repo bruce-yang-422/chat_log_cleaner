@@ -4,7 +4,7 @@ from user_identifier import identify_users_from_file, normalize_user_name
 from smart_user_identifier import smart_identify_users
 from user_directory_manager import user_directory_manager
 
-def extract_user_and_content(parts, real_users=None, user_mapping=None):
+def extract_user_and_content(parts, real_users=None, user_mapping=None, config=None):
     """
     智能解析使用者名稱和內容
     
@@ -23,7 +23,71 @@ def extract_user_and_content(parts, real_users=None, user_mapping=None):
     if len(parts) == 1:
         return parts[0], ""
     
-    # 方法0：第一輪比對 - 使用使用者名冊（完全比對）
+    # 方法0：優先處理簡短明確的使用者名稱（如 "WhoAmI"）
+    # 檢查第一個部分是否為明確的使用者名稱
+    first_part = parts[0]
+    
+    # 簡短明確的使用者名稱特徵：
+    # 1. 長度適中（可配置範圍）
+    # 2. 不包含空格
+    # 3. 不是表情符號或特殊符號
+    # 4. 不是URL
+    # 5. 不是明顯的內容詞
+    min_username_length = 2
+    max_username_length = 15
+    
+    # 從配置中獲取使用者名稱長度限制
+    try:
+        import json
+        with open('config.json', 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        min_username_length = config['analysis_settings']['min_user_name_length_用戶名最小長度']
+        max_username_length = config['analysis_settings']['max_user_name_length_用戶名最大長度']
+    except:
+        pass  # 如果無法讀取配置，使用默認值
+    
+    # 從配置中獲取解析設置
+    emoji_chars = ['😀', '😂', '😅', '🙏', '～']  # 默認值
+    content_indicators = ['貼圖', '圖片', '影片', '語音訊息', '檔案', '位置']  # 默認值
+    conversation_starters = ['嗨嗨', '想跟你討教', '順便問一下', '我還是先', '我把樓上', '合約都', '然後', 'User～']  # 默認值
+    
+    try:
+        parsing_settings = config.get('parsing_settings', {})
+        emoji_chars = parsing_settings.get('emoji_chars', emoji_chars)
+        content_indicators = parsing_settings.get('content_indicators', content_indicators)
+        conversation_starters = parsing_settings.get('conversation_starters', conversation_starters)
+    except:
+        pass  # 如果無法讀取配置，使用默認值
+    
+    if (min_username_length <= len(first_part) <= max_username_length and 
+        ' ' not in first_part and 
+        not any(char in first_part for char in emoji_chars) and
+        not first_part.startswith('http') and
+        first_part not in content_indicators and
+        first_part not in conversation_starters):
+        
+        # 檢查是否為已知使用者
+        result = user_directory_manager.find_user_by_name(first_part)
+        if result:
+            content = ' '.join(parts[1:]) if len(parts) > 1 else ""
+            return result, content
+        
+        # 如果有智能識別結果，檢查是否匹配
+        if real_users and first_part in real_users:
+            content = ' '.join(parts[1:]) if len(parts) > 1 else ""
+            return first_part, content
+        
+        # 檢查映射關係
+        if user_mapping and first_part in user_mapping:
+            mapped_user = user_mapping[first_part]
+            content = ' '.join(parts[1:]) if len(parts) > 1 else ""
+            return mapped_user, content
+        
+        # 如果第一個部分看起來像使用者名稱，直接使用
+        content = ' '.join(parts[1:]) if len(parts) > 1 else ""
+        return first_part, content
+    
+    # 方法1：使用使用者名冊（完全比對）
     for i in range(1, min(len(parts) + 1, 6)):
         potential_user = ' '.join(parts[:i])
         
@@ -170,11 +234,17 @@ def parse_chat_log(file_path, config):
     date_end = datetime.strptime(config["date_range"]["end"], "%Y-%m-%d")
     watchlist = set(config["watchlist_users"])
     exclude_keywords = set(config["exclude_keywords"])
+    watchlist_keywords = set(config.get("watchlist_keywords", []))
+    
+    # 從配置中獲取分析參數
+    analysis_settings = config['analysis_settings']
+    sample_count = analysis_settings['sample_count_智能識別樣本數量']
+    traditional_sample_count = analysis_settings['traditional_sample_count_傳統識別樣本數量']
     
     # 智能使用者識別
     print(f"正在進行智能使用者識別...")
     try:
-        real_users, user_mapping = smart_identify_users(file_path, sample_count=50)
+        real_users, user_mapping = smart_identify_users(file_path, sample_count=sample_count, config=config)
         print(f"智能識別結果：{real_users}")
         if user_mapping:
             print(f"使用者映射：{user_mapping}")
@@ -184,7 +254,7 @@ def parse_chat_log(file_path, config):
     
     # 傳統使用者模式識別（作為備用）
     print(f"正在分析傳統使用者模式...")
-    user_patterns = identify_users_from_file(file_path, sample_count=20)
+    user_patterns = identify_users_from_file(file_path, sample_count=traditional_sample_count)
     if user_patterns:
         print(f"識別出 {len(user_patterns)} 個使用者模式：")
         for prefix, full_name in user_patterns.items():
@@ -234,7 +304,7 @@ def parse_chat_log(file_path, config):
                     
                     if len(parts) >= 1:
                         # 嘗試識別完整的使用者名稱
-                        user, content = extract_user_and_content(parts, real_users, user_mapping)
+                        user, content = extract_user_and_content(parts, real_users, user_mapping, config)
                     else:
                         user = ""
                         content = ""
@@ -266,6 +336,14 @@ def parse_chat_log(file_path, config):
 
                 # 檢查是否為關注對象
                 is_watchlist = normalized_user in watchlist
+                
+                # 檢查是否包含關注關鍵字
+                contains_watchlist_keywords = any(kw in content for kw in watchlist_keywords)
+                
+                # 如果包含關注關鍵字，標記為關注對象
+                if contains_watchlist_keywords:
+                    is_watchlist = True
+                
                 last_entry = [current_date, time, normalized_user, content, is_watchlist]
                 messages.append(last_entry)
             elif last_entry:

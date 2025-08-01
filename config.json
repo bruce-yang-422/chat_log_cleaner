@@ -1,10 +1,10 @@
 {
   "date_range": {
-    "start": "2021-01-01",
+    "start": "2025-07-31",
     "end": "2025-12-31"
   },
   "watchlist_users": [
-    "S2-%",
+    "關注用戶1",
     "關注用戶2"
   ],
   "exclude_keywords": [
@@ -13,5 +13,31 @@
     "退出群組",
     "封鎖",
     "解除封鎖"
-  ]
+  ],
+  "watchlist_keywords": [
+    "維修",
+    "道歉",
+    "客人",
+    "有錢",
+    "社會中堅",
+    "小屁孩"
+  ],
+  "analysis_settings": {
+    "sample_count_智能識別樣本數量": 500,
+    "traditional_sample_count_傳統識別樣本數量": 20,
+    "min_frequency_private_私聊最小頻率": 0.05,
+    "min_frequency_group_社群最小頻率": 0.03,
+    "min_content_diversity_最小內容多樣性": 0.05,
+    "max_user_name_length_用戶名最大長度": 20,
+    "min_user_name_length_用戶名最小長度": 2
+  },
+  "parsing_settings": {
+    "emoji_chars": ["😀", "😂", "😅", "🙏", "～"],
+    "content_indicators": ["貼圖", "圖片", "影片", "語音訊息", "檔案", "位置"],
+    "conversation_starters": ["嗨嗨", "想跟你討教", "順便問一下", "我還是先", "我把樓上", "合約都", "然後", "User～"],
+    "content_start_words": ["youtote", "Momo", "My", "From", "One", "【", "Lalamove", "下載位置"],
+    "system_keywords": ["加入聊天", "退出群組", "退出社群", "封鎖", "解除封鎖"],
+    "excluded_users": ["咻咻咻", "點", "瑪菈緹雅", "嵐", "Bruce"],
+    "bot_keywords": ["bot", "廣告", "spam", "auto"]
+  }
 }
