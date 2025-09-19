@@ -1,3 +1,37 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+傳統使用者識別器 (Traditional User Identifier)
+
+此腳本提供傳統的使用者識別功能，作為智能識別的備用方案：
+1. 從聊天記錄中提取使用者名稱樣本
+2. 分析使用者名稱模式
+3. 建立使用者名稱標準化映射
+4. 提供調試和分析功能
+
+主要功能：
+- 樣本提取：從聊天記錄前N條訊息中提取使用者樣本
+- 模式分析：統計使用者名稱出現頻率
+- 標準化映射：建立短名稱到完整名稱的映射
+- 調試輸出：提供詳細的分析結果輸出
+
+與智能識別器的差異：
+- 使用更簡單的統計方法
+- 依賴預定義的映射規則
+- 提供更直觀的調試資訊
+- 作為智能識別的備用方案
+
+適用場景：
+- 簡單的聊天記錄處理
+- 使用者名稱模式分析
+- 調試和測試
+- 作為智能識別的對比基準
+
+Authors: 楊翔志 & AI Collective
+Studio: tranquility-base
+版本: 1.0
+"""
+
 import re
 from collections import Counter, defaultdict
 from typing import List, Dict, Tuple

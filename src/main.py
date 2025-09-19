@@ -1,3 +1,28 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+聊天記錄清理器主程式 (Chat Log Cleaner Main)
+
+此腳本為聊天記錄清理系統的主入口點，負責：
+1. 載入配置文件
+2. 掃描原始聊天記錄檔案
+3. 批量處理多個聊天記錄檔案
+4. 將解析結果輸出為CSV格式
+
+工作流程：
+1. 讀取 config.json 配置文件
+2. 掃描 data/raw/ 目錄下的所有 .txt 檔案
+3. 對每個檔案調用 chat_parser.py 進行解析
+4. 將結果保存到 data/output/ 目錄
+
+輸入：data/raw/*.txt（原始聊天記錄檔案）
+輸出：data/output/*.csv（清理後的CSV檔案）
+
+Authors: 楊翔志 & AI Collective
+Studio: tranquility-base
+版本: 1.0
+"""
+
 import os
 import glob
 from chat_parser import parse_chat_log

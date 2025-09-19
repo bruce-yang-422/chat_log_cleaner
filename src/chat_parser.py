@@ -1,3 +1,29 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+聊天記錄解析器 (Chat Log Parser)
+
+此腳本負責解析聊天記錄檔案，提取訊息內容並進行智能過濾。
+主要功能包括：
+1. 解析多種聊天記錄格式（LINE、WhatsApp等）
+2. 智能識別使用者名稱和訊息內容
+3. 根據配置進行日期範圍和關鍵字過濾
+4. 支援關注對象和關鍵字標記
+5. 處理多行訊息和特殊格式
+
+支援的輸入格式：
+- Tab分隔格式：時間\t使用者\t內容
+- 空格分隔格式：時間 使用者 內容
+- 多種日期格式：YYYY.MM.DD 星期X 或 YYYY/MM/DD（週X）
+
+輸出格式：
+- CSV檔案，包含：日期、時間、使用者、訊息內容、是否關注對象
+
+Authors: 楊翔志 & AI Collective
+Studio: tranquility-base
+版本: 1.0
+"""
+
 import re
 from datetime import datetime
 from user_identifier import identify_users_from_file, normalize_user_name

@@ -1,5 +1,35 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+使用者名冊管理器 (User Directory Manager)
+
+此腳本負責管理使用者名冊，提供：
+1. 載入和保存使用者名冊JSON檔案
+2. 完全比對查找使用者名稱
+3. 使用者名冊的增刪改查功能
+4. 統計資訊和元數據管理
+
+主要功能：
+- 名冊載入：從JSON檔案載入使用者名冊
+- 完全比對：根據使用者名稱進行精確匹配
+- 名冊管理：添加、刪除、修改使用者資訊
+- 統計分析：提供使用者名冊統計資訊
+- 檔案操作：自動保存和備份功能
+
+檔案格式：
+- 輸入：data/user_directory.json
+- 結構：{"users": [...], "metadata": {...}}
+
+適用場景：
+- 聊天記錄使用者識別
+- 使用者名稱標準化
+- 使用者資料管理
+- 批量使用者處理
+
+Authors: 楊翔志 & AI Collective
+Studio: tranquility-base
+版本: 1.0
+"""
 
 import json
 import os

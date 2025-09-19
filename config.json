@@ -1,6 +1,6 @@
 {
   "date_range": {
-    "start": "2025-07-31",
+    "start": "2025-09-11",
     "end": "2025-12-31"
   },
   "watchlist_users": [
@@ -12,7 +12,8 @@
     "退出社群",
     "退出群組",
     "封鎖",
-    "解除封鎖"
+    "解除封鎖",
+    "Auto-reply"
   ],
   "watchlist_keywords": [
     "維修",

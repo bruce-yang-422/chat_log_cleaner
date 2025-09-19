@@ -14,6 +14,8 @@
 - **📝 多行訊息處理**：正確處理包含換行的訊息
 - **🛡️ 錯誤處理**：優雅的檔案權限和格式錯誤處理
 - **👥 使用者名冊**：支援預設使用者名冊進行精確匹配
+- **📄 CSV拆解器**：將CSV結果智能拆解成多個Markdown檔案
+- **🧠 智能分配**：基於最少筆數標準避免檔案筆數過少
 
 ## 📁 檔案結構
 
@@ -31,6 +33,7 @@ chat_log_cleaner/
 │   ├── smart_user_identifier.py  # 智能使用者識別器
 │   ├── user_identifier.py        # 傳統使用者識別器（備用）
 │   ├── user_directory_manager.py # 使用者名冊管理器
+│   ├── csv_splitter.py           # CSV結果拆解器
 │   ├── utils.py                  # 工具函數
 │   └── TreeMaker.py              # 目錄樹生成器
 ├── requirements.txt              # Python依賴套件
@@ -138,8 +141,24 @@ pip install -r requirements.txt
 python src/main.py
 ```
 
+### 6. 拆解CSV結果（可選）
+
+將生成的CSV檔案拆解成多個Markdown檔案，便於閱讀和分析：
+
+```bash
+# 使用預設設定（最多10個檔案，每檔案至少100筆）
+python src/csv_splitter.py
+
+# 自訂參數
+python src/csv_splitter.py --max-files 5 --min-records 200
+
+# 處理單一檔案
+python src/csv_splitter.py --file data/output/[LINE]《神州M》官方討論群.csv
+```
+
 ## 📊 輸出格式
 
+### CSV檔案格式
 程式會生成CSV檔案，包含以下欄位：
 
 - **日期**：訊息日期 (YYYY-MM-DD)
@@ -147,6 +166,15 @@ python src/main.py
 - **使用者**：智能識別後的使用者名稱
 - **訊息內容**：訊息文字內容
 - **是否關注對象**：布林值，標記是否為關注對象
+
+### Markdown檔案格式
+CSV拆解器會生成多個Markdown檔案，包含：
+
+- **檔案命名**：`chat_part_001_YYYY-MM-DD_to_YYYY-MM-DD.md`
+- **智能分配**：最多10個檔案，平均分配筆數
+- **順序註記**：開頭和結尾包含AI可讀的註記
+- **關注標記**：⭐ 標記關注對象的訊息
+- **統計資訊**：每個檔案顯示筆數和日期範圍
 
 ## 🔧 支援的聊天記錄格式
 
@@ -301,7 +329,50 @@ python src/main.py
 4. **記憶體使用**：處理大量資料時注意記憶體使用量
 5. **檔案鎖定**：確保輸出檔案未被其他程式開啟
 
+## 📄 CSV拆解器功能
+
+### 智能分配算法
+- **最少筆數標準**：預設每檔案至少100筆（可自訂）
+- **理想檔案數計算**：`總筆數 ÷ 最少筆數 = 理想檔案數`
+- **智能調整**：根據資料量自動調整檔案數量
+- **品質控制**：確保每個檔案都有足夠的內容
+
+### 分配範例
+```python
+# 5,247筆資料，最少100筆/檔案
+ideal_files = 5247 // 100 = 52
+actual_files = min(52, 10) = 10  # 使用最大限制
+
+# 850筆資料
+ideal_files = 850 // 100 = 8
+actual_files = 8  # 使用理想檔案數
+
+# 50筆資料
+ideal_files = 50 // 100 = 0
+actual_files = 1  # 只生成1個檔案
+```
+
+### Markdown註記格式
+```html
+<!-- CHAT_LOG_START:PART_001_OF_010 -->
+<!-- FILE_INFO:START_DATE=2024-01-01,END_DATE=2024-01-15,MESSAGE_COUNT=525 -->
+<!-- GENERATED_TIME:2024-01-20_10:30:00 -->
+
+# 聊天記錄 - 第 1 部分
+...
+
+<!-- CHAT_LOG_END:PART_001_OF_010 -->
+```
+
 ## 🔄 版本更新
+
+### v2.2 CSV拆解器版本
+- ✅ 新增CSV結果拆解器
+- ✅ 智能分配算法，避免檔案筆數過少
+- ✅ Markdown格式輸出，便於閱讀
+- ✅ AI可讀的順序註記
+- ✅ 關注對象標記功能
+- ✅ 靈活的參數配置
 
 ### v2.1 使用者名冊版本
 - ✅ 新增使用者名冊功能
@@ -325,5 +396,5 @@ python src/main.py
 ---
 
 **作者**：楊翔志 & AI Collective  
-**版本**：v2.1  
-**更新日期**：2025-08-01
+**版本**：v2.2  
+**更新日期**：2025-01-20
